@@ -19,6 +19,7 @@ pub mod lines;
 pub mod render;
 pub mod table;
 pub mod time;
+pub mod json;
 
 mod cell;
 mod escape;
@@ -46,6 +47,7 @@ pub enum Mode {
     /// The `--code` lines-of-code summary, which lists languages rather than
     /// files.
     Code(code::Options),
+    Json(json::Options),
 }
 
 /// The width of the terminal requested by the user.

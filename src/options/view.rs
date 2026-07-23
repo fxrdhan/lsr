@@ -19,7 +19,7 @@ use crate::output::table::{
     Columns, FlagsFormat, GroupFormat, Options as TableOptions, SizeFormat, TimeTypes, UserFormat,
 };
 use crate::output::time::TimeFormat;
-use crate::output::{Mode, TerminalWidth, View, code, details, grid};
+use crate::output::{Mode, TerminalWidth, View, code, details, grid, json};
 
 use super::parser::{ColorScaleArgs, TimeArgs};
 
@@ -72,6 +72,12 @@ impl Mode {
         let oneline = matches.get_flag("oneline");
         let grid = matches.get_flag("grid");
         let tree = matches.get_flag("tree");
+        let json = matches.get_flag("json");
+
+        if json {
+            let json = json::Options::deduce(matches);
+            return Ok(Self::Json(json));
+        }
 
         if !long && strict {
             Self::strict_check_long_flags(matches)?;
@@ -154,6 +160,12 @@ impl grid::Options {
         grid::Options {
             across: matches.get_flag("across"),
         }
+    }
+}
+
+impl json::Options {
+    fn deduce(matches: &ArgMatches) -> Self {
+        json::Options { long: false }
     }
 }
 
