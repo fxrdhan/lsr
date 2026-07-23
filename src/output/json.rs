@@ -6,14 +6,18 @@
 // SPDX-License-Identifier: MIT
 use std::{
     io::{self, Write},
+    iter::Map,
     unimplemented,
 };
 
-use crate::fs::{Dir, DotFilter, File, feature::git::GitCache};
+use crate::{
+    fs::{Dir, DotFilter, File, feature::git::GitCache},
+    output::{details, table::Column},
+};
 
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Options {
-    pub long: bool,
+    pub details: Option<details::Options>,
 }
 
 pub struct Render<'a> {
@@ -24,6 +28,7 @@ pub struct Render<'a> {
     pub git_ignoring: bool,
 
     pub dots: DotFilter,
+    pub opts: &'a Options,
 }
 
 impl<'a> Render<'a> {
@@ -46,8 +51,19 @@ impl<'a> Render<'a> {
     }
 
     fn render_files<W: Write>(&self, files: Vec<File<'a>>, w: &mut W) -> io::Result<()> {
-        let fnames: Vec<String> = files.iter().map(|f| self.render_file(f)).collect();
-        write!(w, "[{}]", fnames.join(","))?;
+        match &self.opts.details {
+            None => {
+                let fnames: Vec<String> = files.iter().map(|f| self.render_file(f)).collect();
+                write!(w, "[{}]", fnames.join(","))?;
+            }
+            Some(_) => {
+                let fnames: Vec<String> = files
+                    .iter()
+                    .map(|f| format!("\"{}\":{}", f.name, self.render_file(f)))
+                    .collect();
+                write!(w, "{{{}}}", fnames.join(","))?;
+            }
+        }
         Ok(())
     }
 
@@ -98,6 +114,48 @@ impl<'a> Render<'a> {
     }
 
     fn render_file(&self, f: &File<'a>) -> String {
-        return format!("\"{}\"", f.name);
+        return match &self.opts.details {
+            None => format!("\"{}\"", f.name),
+            Some(o) => self.render_file_long(f, o),
+        };
+    }
+
+    fn render_file_long(&self, f: &File<'a>, o: &details::Options) -> String {
+        let fobj = JsonFileObject::create_for_for_file(
+            f,
+            o.table.as_ref().unwrap().columns.collect(false, false),
+        );
+
+        fobj.render()
+    }
+}
+
+struct JsonFileObject {
+    /// Reusing the table column to map everything we want to be displayed
+    internal: Vec<(Column, String)>,
+}
+
+impl JsonFileObject {
+    /// Render a json object with the columns in the map
+    fn render(self) -> String {
+        self.internal
+            .iter()
+            .map(|(c, v)| format!("\"{}\": {}", c.header(), v))
+            .collect::<Vec<String>>()
+            .join(",")
+    }
+
+    fn create_for_for_file<'a>(f: &File<'a>, columns: Vec<Column>) -> Self {
+        let mut res = Self { internal: vec![] };
+
+        columns.iter().for_each(|c| res.add_column(f, c));
+
+        return res;
+    }
+
+    fn add_column<'a>(&mut self, f: &File<'a>, c: &Column) {
+        match c {
+            c => unimplemented!("{:?}", c),
+        }
     }
 }

@@ -304,13 +304,14 @@ impl Exa<'_> {
         let no_files = files.is_empty();
         let is_only_dir = dirs.len() == 1 && no_files;
 
-        if let Mode::Json(_) = &self.options.view.mode {
+        if let Mode::Json(opts) = &self.options.view.mode {
             let r = json::Render {
                 git: self.git.as_ref(),
                 git_ignoring: self.options.filter.git_ignore == GitIgnore::CheckAndIgnore,
                 deref_links: self.options.view.deref_links,
                 total_size: self.options.view.total_size,
                 dots: self.options.filter.dot_filter,
+                opts,
             };
 
             r.render(files, dirs, &mut self.writer)?;

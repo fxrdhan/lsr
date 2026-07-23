@@ -75,7 +75,7 @@ impl Mode {
         let json = matches.get_flag("json");
 
         if json {
-            let json = json::Options::deduce(matches);
+            let json = json::Options::deduce(matches, vars, long)?;
             return Ok(Self::Json(json));
         }
 
@@ -164,8 +164,14 @@ impl grid::Options {
 }
 
 impl json::Options {
-    fn deduce(matches: &ArgMatches) -> Self {
-        json::Options { long: false }
+    fn deduce<V: Vars>(matches: &ArgMatches, vars: &V, long: bool) -> Result<Self, OptionsError> {
+        let details = if long {
+            Some(details::Options::deduce_json(matches, vars)?)
+        } else {
+            None
+        };
+
+        Ok(json::Options { details })
     }
 }
 
@@ -180,6 +186,18 @@ impl details::Options {
             color_scale: ColorScaleOptions::deduce(matches, vars),
             follow_links: matches.get_flag("follow-symlinks"),
         }
+    }
+
+    fn deduce_json<V: Vars>(matches: &ArgMatches, vars: &V) -> Result<Self, OptionsError> {
+        Ok(details::Options {
+            table: Some(TableOptions::deduce(matches, vars)?),
+            header: false,
+            xattr: xattr::ENABLED && matches.get_flag("extended"),
+            secattr: xattr::ENABLED && matches.get_flag("security-context"),
+            mounts: matches.get_flag("mounts"),
+            color_scale: ColorScaleOptions::default(),
+            follow_links: matches.get_flag("follow-symlinks"),
+        })
     }
 
     fn deduce_long<V: Vars>(
