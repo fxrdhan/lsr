@@ -39,10 +39,29 @@ impl PermissionsPlusRender for Option<f::PermissionsPlus> {
             }
         }
     }
+
+    fn render_json(&self) -> String {
+        if let Some(p) = self {
+            let mut chars = vec![p.file_type.render_json()];
+            let permissions = p.permissions;
+            chars.extend(Some(permissions).render_json(p.file_type.is_regular_file()));
+
+            if p.xattrs {
+                chars.push("@");
+            }
+
+            chars.join("")
+        } else {
+            let chars: Vec<_> = iter::repeat_n("-", 10).collect();
+
+            chars.join("")
+        }
+    }
 }
 
 pub trait RenderPermissions {
     fn render<C: Colours>(&self, colours: &C, is_regular_file: bool) -> Vec<ANSIString<'static>>;
+    fn render_json(&self, is_regular_file: bool) -> Vec<&'static str>;
 }
 
 impl RenderPermissions for Option<f::Permissions> {
@@ -70,6 +89,30 @@ impl RenderPermissions for Option<f::Permissions> {
                 ]
             }
             None => std::iter::repeat_n(colours.dash().paint("-"), 9).collect(),
+        }
+    }
+
+    fn render_json(&self, is_regular_file: bool) -> Vec<&'static str> {
+        let bit = |bit, chr: &'static str| {
+            if bit {
+                chr
+            } else {
+                "-"
+            }
+        };
+
+        match self {
+            Some(p) =>      vec![bit(p.user_read, "r"),
+                    bit(p.user_write, "w"),
+                    "-", // p.user_execute_bit(colours, is_regular_file),
+                    bit(p.group_read, "r"),
+                    bit(p.group_write, "w"),
+                    "-", // p.group_execute_bit(colours),
+                    bit(p.other_read, "r"),
+                    bit(p.other_write, "w"),
+                    "-", //p.other_execute_bit(colours),
+                    ],
+            None => std::iter::repeat_n("-", 9).collect::<Vec<&'static str>>()
         }
     }
 }

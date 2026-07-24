@@ -526,26 +526,6 @@ impl<'a> Table<'a> {
     }
 
     #[cfg(unix)]
-    fn permissions_plus(&self, file: &File<'_>, xattrs: bool) -> Option<f::PermissionsPlus> {
-        file.permissions().map(|p| f::PermissionsPlus {
-            file_type: file.type_char(),
-            permissions: p,
-            xattrs,
-        })
-    }
-
-    #[allow(clippy::unnecessary_wraps)] // Needs to match Unix function
-    #[cfg(windows)]
-    fn permissions_plus(&self, file: &File<'_>, xattrs: bool) -> Option<f::PermissionsPlus> {
-        Some(f::PermissionsPlus {
-            file_type: file.type_char(),
-            #[cfg(windows)]
-            attributes: file.attributes()?,
-            xattrs,
-        })
-    }
-
-    #[cfg(unix)]
     fn octal_permissions(&self, file: &File<'_>) -> Option<f::OctalPermissions> {
         file.permissions()
             .map(|p| f::OctalPermissions { permissions: p })
@@ -559,7 +539,7 @@ impl<'a> Table<'a> {
         color_scale_info: Option<ColorScaleInformation>,
     ) -> TextCell {
         match column {
-            Column::Permissions => self.permissions_plus(file, xattrs).render(self.theme),
+            Column::Permissions => file.permissions_plus(xattrs).render(self.theme),
             Column::FileSize => file.size().render(
                 self.theme,
                 self.size_format,

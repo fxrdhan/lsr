@@ -11,8 +11,8 @@ use std::{
 };
 
 use crate::{
-    fs::{Dir, DotFilter, File, feature::git::GitCache},
-    output::{details, table::Column},
+    fs::{Dir, DotFilter, File, feature::git::GitCache, fields as f},
+    output::{details, render::PermissionsPlusRender, table::Column},
 };
 
 #[derive(PartialEq, Eq, Debug)]
@@ -25,10 +25,12 @@ pub struct Render<'a> {
 
     pub deref_links: bool,
     pub total_size: bool,
-    pub git_ignoring: bool,
 
     pub dots: DotFilter,
     pub opts: &'a Options,
+
+    pub git_ignoring: bool,
+    pub git_repos: bool,
 }
 
 impl<'a> Render<'a> {
@@ -59,7 +61,7 @@ impl<'a> Render<'a> {
             Some(_) => {
                 let fnames: Vec<String> = files
                     .iter()
-                    .map(|f| format!("\"{}\":{}", f.name, self.render_file(f)))
+                    .map(|f| format!("\"{}\":{{{}}}", f.name, self.render_file(f)))
                     .collect();
                 write!(w, "{{{}}}", fnames.join(","))?;
             }
@@ -123,9 +125,12 @@ impl<'a> Render<'a> {
     fn render_file_long(&self, f: &File<'a>, o: &details::Options) -> String {
         let fobj = JsonFileObject::create_for_for_file(
             f,
-            o.table.as_ref().unwrap().columns.collect(false, false),
+            o.table
+                .as_ref()
+                .unwrap()
+                .columns
+                .collect(self.git.is_some(), self.git_repos),
         );
-
         fobj.render()
     }
 }
@@ -155,7 +160,12 @@ impl JsonFileObject {
 
     fn add_column<'a>(&mut self, f: &File<'a>, c: &Column) {
         match c {
-            c => unimplemented!("{:?}", c),
+            Column::Permissions => {
+                /// TODO handle xattrs
+                let display = format!("\"{}\"", f.permissions_plus(false).render_json());
+                self.internal.push((*c, display))
+            }
+            c => {}
         }
     }
 }

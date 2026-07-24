@@ -30,6 +30,10 @@ impl PermissionsPlusRender for Option<f::PermissionsPlus> {
             },
         }
     }
+
+    fn render_json(&self) -> String {
+        unimplemented!("not implemented for windows")
+    }
 }
 
 impl f::Attributes {

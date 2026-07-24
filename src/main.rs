@@ -312,6 +312,7 @@ impl Exa<'_> {
                 total_size: self.options.view.total_size,
                 dots: self.options.filter.dot_filter,
                 opts,
+                git_repos: self.git_repos,
             };
 
             r.render(files, dirs, &mut self.writer)?;
