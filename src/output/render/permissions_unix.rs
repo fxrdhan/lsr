@@ -94,25 +94,45 @@ impl RenderPermissions for Option<f::Permissions> {
 
     fn render_json(&self, is_regular_file: bool) -> Vec<&'static str> {
         let bit = |bit, chr: &'static str| {
-            if bit {
-                chr
-            } else {
-                "-"
-            }
+            if bit { chr } else { "-" }
         };
 
         match self {
-            Some(p) =>      vec![bit(p.user_read, "r"),
+            Some(p) => {
+                let user_exec = match (p.user_execute, p.setuid, is_regular_file) {
+                    (false, false, _) => "-",
+                    (true, false, _) => "x",
+                    (false, true, _) => "S",
+                    (true, true, _) => "s",
+                };
+
+                let group_exec = match (p.group_execute, p.setgid) {
+                    (false, false) => "-",
+                    (true, false) => "x",
+                    (false, true) => "S",
+                    (true, true) => "s",
+                };
+
+                let other_exec = match (p.other_execute, p.sticky) {
+                    (false, false) => "-",
+                    (true, false) => "x",
+                    (false, true) => "T",
+                    (true, true) => "t",
+                };
+
+                return vec![
+                    bit(p.user_read, "r"),
                     bit(p.user_write, "w"),
-                    "-", // p.user_execute_bit(colours, is_regular_file),
+                    user_exec, // p.user_execute_bit(colours, is_regular_file),
                     bit(p.group_read, "r"),
                     bit(p.group_write, "w"),
-                    "-", // p.group_execute_bit(colours),
+                    group_exec, // p.group_execute_bit(colours),
                     bit(p.other_read, "r"),
                     bit(p.other_write, "w"),
-                    "-", //p.other_execute_bit(colours),
-                    ],
-            None => std::iter::repeat_n("-", 9).collect::<Vec<&'static str>>()
+                    other_exec, //p.other_execute_bit(colours),
+                ];
+            }
+            None => std::iter::repeat_n("-", 9).collect::<Vec<&'static str>>(),
         }
     }
 }

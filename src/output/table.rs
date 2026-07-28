@@ -393,14 +393,14 @@ impl Default for TimeTypes {
 /// Any environment field should be able to be mocked up for test runs.
 pub struct Environment {
     /// The computer’s current time offset, determined from time zone.
-    time_offset: FixedOffset,
+    pub time_offset: FixedOffset,
 
     /// Localisation rules for formatting numbers.
-    numeric: locale::Numeric,
+    pub numeric: locale::Numeric,
 
     /// Mapping cache of user IDs to usernames.
     #[cfg(unix)]
-    users: Mutex<UsersCache>,
+    pub users: Mutex<UsersCache>,
 }
 
 impl Environment {
@@ -427,7 +427,7 @@ impl Environment {
     }
 }
 
-static ENVIRONMENT: LazyLock<Environment> = LazyLock::new(Environment::load_all);
+pub static ENVIRONMENT: LazyLock<Environment> = LazyLock::new(Environment::load_all);
 
 pub struct Table<'a> {
     columns: Vec<Column>,

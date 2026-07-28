@@ -32,7 +32,15 @@ impl PermissionsPlusRender for Option<f::PermissionsPlus> {
     }
 
     fn render_json(&self) -> String {
-        unimplemented!("not implemented for windows")
+        match self {
+            Some(p) => {
+                let mut chars = vec![p.attributes.render_type_json()];
+                chars.extend(p.attributes.render_json());
+
+                chars
+            }
+            None => vec![],
+        }
     }
 }
 
@@ -61,5 +69,27 @@ impl f::Attributes {
             return colours.directory().paint("d");
         }
         colours.dash().paint("-")
+    }
+
+    pub fn render_json(self) -> Vec<&'static str> {
+        let bit = |bit, chr: &'static str| {
+            if bit { chr } else { "-" }
+        };
+
+        vec![
+            bit(self.archive, "a"),
+            bit(self.readonly, "r"),
+            bit(self.hidden, "h"),
+            bit(self.system, "s"),
+        ]
+    }
+
+    pub fn render_type_json(self) -> Vec<&'static str> {
+        if self.reparse_point {
+            return "l";
+        } else if self.directory {
+            return "d";
+        }
+        "-"
     }
 }

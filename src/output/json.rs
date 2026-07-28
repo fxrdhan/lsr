@@ -4,19 +4,20 @@
 // SPDX-FileCopyrightText: 2023-2026 Christina Sørensen, eza contributors
 // SPDX-FileCopyrightText: 2014 Benjamin Sago
 // SPDX-License-Identifier: MIT
-use std::{
-    io::{self, Write},
-    iter::Map,
-    unimplemented,
-};
+use std::io::{self, Write};
 
 use crate::{
     fs::{Dir, DotFilter, File, feature::git::GitCache, fields as f},
-    output::{details, render::PermissionsPlusRender, table::Column},
+    output::{
+        details,
+        render::{PermissionsPlusRender, TimeRender},
+        table::{Column, ENVIRONMENT, Environment, Options as TableOptions},
+    },
 };
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Options {
+    /// Options for the --long option itself
     pub details: Option<details::Options>,
 }
 
@@ -31,9 +32,38 @@ pub struct Render<'a> {
 
     pub git_ignoring: bool,
     pub git_repos: bool,
+
+    environment: &'a Environment,
 }
 
 impl<'a> Render<'a> {
+    pub fn new(
+        git: Option<&'a GitCache>,
+
+        deref_links: bool,
+        total_size: bool,
+
+        dots: DotFilter,
+        opts: &'a Options,
+
+        git_ignoring: bool,
+        git_repos: bool,
+    ) -> Self {
+        /// Should not cause problem as usage of the global at both places should not happen, but maybe need advice on how to better handle that ?
+        let environment = &*ENVIRONMENT;
+
+        Self {
+            git,
+            deref_links,
+            total_size,
+            dots,
+            opts,
+            git_ignoring,
+            git_repos,
+            environment,
+        }
+    }
+
     pub fn render<W: Write>(
         &self,
         files: Vec<File<'a>>,
@@ -123,24 +153,29 @@ impl<'a> Render<'a> {
     }
 
     fn render_file_long(&self, f: &File<'a>, o: &details::Options) -> String {
-        let fobj = JsonFileObject::create_for_for_file(
-            f,
-            o.table
-                .as_ref()
-                .unwrap()
-                .columns
-                .collect(self.git.is_some(), self.git_repos),
-        );
-        fobj.render()
+        if let Some(table_opts) = &o.table {
+            let fobj = JsonFileObject::create_for_for_file(
+                f,
+                table_opts,
+                self.git.is_some(),
+                self.git_repos,
+                self.environment,
+            );
+            fobj.render()
+        } else {
+            String::new()
+        }
     }
 }
 
-struct JsonFileObject {
+struct JsonFileObject<'a> {
     /// Reusing the table column to map everything we want to be displayed
     internal: Vec<(Column, String)>,
+
+    options: &'a TableOptions,
 }
 
-impl JsonFileObject {
+impl<'a> JsonFileObject<'a> {
     /// Render a json object with the columns in the map
     fn render(self) -> String {
         self.internal
@@ -150,22 +185,43 @@ impl JsonFileObject {
             .join(",")
     }
 
-    fn create_for_for_file<'a>(f: &File<'a>, columns: Vec<Column>) -> Self {
-        let mut res = Self { internal: vec![] };
+    fn create_for_for_file(
+        f: &File<'a>,
+        options: &'a TableOptions,
+        actually_enable_git: bool,
+        git_repos: bool,
+        env: &Environment,
+    ) -> Self {
+        let mut res = Self {
+            internal: vec![],
+            options,
+        };
 
-        columns.iter().for_each(|c| res.add_column(f, c));
+        let columns = options.columns.collect(actually_enable_git, git_repos);
+
+        columns.iter().for_each(|c| res.add_column(f, c, env));
 
         return res;
     }
 
-    fn add_column<'a>(&mut self, f: &File<'a>, c: &Column) {
+    fn add_column(&mut self, f: &File, c: &Column, env: &Environment) {
+        let column_opt = self.get_column(f, c, env);
+
+        if let Some(column) = column_opt {
+            self.internal.push((*c, format!("\"{column}\"")))
+        }
+    }
+
+    fn get_column(&self, f: &File, c: &Column, env: &Environment) -> Option<String> {
         match c {
-            Column::Permissions => {
-                /// TODO handle xattrs
-                let display = format!("\"{}\"", f.permissions_plus(false).render_json());
-                self.internal.push((*c, display))
-            }
-            c => {}
+            /// TODO handle xattrs
+            Column::Permissions => Some(f.permissions_plus(false).render_json()),
+            Column::Timestamp(time_type) => Some(
+                time_type
+                    .get_corresponding_time(f)
+                    .render_json(env.time_offset, self.options.time_format.clone()),
+            ),
+            c => None,
         }
     }
 }
