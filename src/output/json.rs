@@ -9,7 +9,7 @@ use std::io::{self, Write};
 use crate::{
     fs::{Dir, DotFilter, File, feature::git::GitCache, fields as f},
     output::{
-        details,
+        details::{self, show_xattr_hint},
         render::{PermissionsPlusRender, TimeRender},
         table::{Column, ENVIRONMENT, Environment, Options as TableOptions},
     },
@@ -160,6 +160,7 @@ impl<'a> Render<'a> {
                 self.git.is_some(),
                 self.git_repos,
                 self.environment,
+                show_xattr_hint(self.opts.details.as_ref().map_or(false, |d| d.secattr), f),
             );
             fobj.render()
         } else {
@@ -191,6 +192,7 @@ impl<'a> JsonFileObject<'a> {
         actually_enable_git: bool,
         git_repos: bool,
         env: &Environment,
+        xattrs: bool,
     ) -> Self {
         let mut res = Self {
             internal: vec![],
@@ -199,23 +201,24 @@ impl<'a> JsonFileObject<'a> {
 
         let columns = options.columns.collect(actually_enable_git, git_repos);
 
-        columns.iter().for_each(|c| res.add_column(f, c, env));
+        columns
+            .iter()
+            .for_each(|c| res.add_column(f, c, env, xattrs));
 
         return res;
     }
 
-    fn add_column(&mut self, f: &File, c: &Column, env: &Environment) {
-        let column_opt = self.get_column(f, c, env);
+    fn add_column(&mut self, f: &File, c: &Column, env: &Environment, xattrs: bool) {
+        let column_opt = self.get_column(f, c, env, xattrs);
 
         if let Some(column) = column_opt {
             self.internal.push((*c, format!("\"{column}\"")))
         }
     }
 
-    fn get_column(&self, f: &File, c: &Column, env: &Environment) -> Option<String> {
+    fn get_column(&self, f: &File, c: &Column, env: &Environment, xattrs: bool) -> Option<String> {
         match c {
-            /// TODO handle xattrs
-            Column::Permissions => Some(f.permissions_plus(false).render_json()),
+            Column::Permissions => Some(f.permissions_plus(xattrs).render_json()),
             Column::Timestamp(time_type) => Some(
                 time_type
                     .get_corresponding_time(f)

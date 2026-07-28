@@ -18,7 +18,7 @@ use crate::fs::{Dir, File};
 use crate::options::parser::CodeContent;
 use crate::output::cell::TextCell;
 use crate::output::color_scale::ColorScaleInformation;
-use crate::output::details::{Options as DetailsOptions, Render as DetailsRender};
+use crate::output::details::{Options as DetailsOptions, Render as DetailsRender, show_xattr_hint};
 use crate::output::file_name::Options as FileStyle;
 use crate::output::table::{Options as TableOptions, Table};
 use crate::theme::Theme;
@@ -144,7 +144,11 @@ impl<'a> Render<'a> {
             .files
             .iter()
             .map(|file| {
-                let row = table.row_for_file(file, drender.show_xattr_hint(file), color_scale_info);
+                let row = table.row_for_file(
+                    file,
+                    show_xattr_hint(self.details.secattr, file),
+                    color_scale_info,
+                );
                 table.add_widths(&row);
                 row
             })
