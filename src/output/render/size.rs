@@ -102,23 +102,23 @@ impl f::Size {
         }
     }
 
-    pub fn render_json(self, size_format: SizeFormat, numerics: &NumericLocale) -> String {
+    pub fn render_json(self, size_format: SizeFormat, numerics: &NumericLocale) -> Option<String> {
         use unit_prefix::NumberPrefix;
 
         let size = match self {
             Self::Some(s) => s,
-            Self::None => return String::from("-"),
-            Self::DeviceIDs(ref ids) => return ids.render_json(),
+            Self::None => return None,
+            Self::DeviceIDs(ref ids) => return Some(ids.render_json()),
         };
 
         let result = match size_format {
             SizeFormat::DecimalBytes => NumberPrefix::decimal(size as f64),
             SizeFormat::BinaryBytes => NumberPrefix::binary(size as f64),
-            SizeFormat::JustBytes => return numerics.format_int(size),
+            SizeFormat::JustBytes => return Some(numerics.format_int(size)),
         };
 
         let (prefix, n) = match result {
-            NumberPrefix::Standalone(b) => return numerics.format_int(b),
+            NumberPrefix::Standalone(b) => return Some(numerics.format_int(b)),
             NumberPrefix::Prefixed(p, n) => (p, n),
         };
 
@@ -129,7 +129,7 @@ impl f::Size {
             numerics.format_int(n.round() as isize)
         };
 
-        return number + symbol;
+        return Some(number + symbol);
     }
 }
 

@@ -12,7 +12,7 @@ use nu_ansi_term::Style;
 
 pub trait PermissionsPlusRender {
     fn render<C: Colours + FiletypeColours>(&self, colours: &C) -> TextCell;
-    fn render_json(&self) -> String;
+    fn render_json(&self) -> Option<String>;
 }
 
 pub trait Colours {

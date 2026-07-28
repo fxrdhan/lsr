@@ -12,7 +12,7 @@ use nu_ansi_term::Style;
 
 pub trait Render {
     fn render(self, style: Style, time_offset: FixedOffset, time_format: TimeFormat) -> TextCell;
-    fn render_json(self, time_offset: FixedOffset, time_format: TimeFormat) -> String;
+    fn render_json(self, time_offset: FixedOffset, time_format: TimeFormat) -> Option<String>;
 }
 
 impl Render for Option<NaiveDateTime> {
@@ -29,14 +29,12 @@ impl Render for Option<NaiveDateTime> {
         TextCell::paint(style, datestamp)
     }
 
-    fn render_json(self, time_offset: FixedOffset, time_format: TimeFormat) -> String {
-        if let Some(time) = self {
+    fn render_json(self, time_offset: FixedOffset, time_format: TimeFormat) -> Option<String> {
+        self.map(|time| {
             time_format.format(&DateTime::<FixedOffset>::from_naive_utc_and_offset(
                 time,
                 time_offset,
             ))
-        } else {
-            String::from("-")
-        }
+        })
     }
 }

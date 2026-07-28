@@ -218,17 +218,14 @@ impl<'a> JsonFileObject<'a> {
 
     fn get_column(&self, f: &File, c: &Column, env: &Environment, xattrs: bool) -> Option<String> {
         match c {
-            Column::Permissions => Some(f.permissions_plus(xattrs).render_json()),
-            Column::Timestamp(time_type) => Some(
-                time_type
-                    .get_corresponding_time(f)
-                    .render_json(env.time_offset, self.options.time_format.clone()),
-            ),
-            Column::FileSize => Some(f.size().render_json(self.options.size_format, &env.numeric)),
-            Column::User => Some(
-                f.user()
-                    .render_json(&*env.lock_users(), self.options.user_format),
-            ),
+            Column::Permissions => f.permissions_plus(xattrs).render_json(),
+            Column::Timestamp(time_type) => time_type
+                .get_corresponding_time(f)
+                .render_json(env.time_offset, self.options.time_format.clone()),
+            Column::FileSize => f.size().render_json(self.options.size_format, &env.numeric),
+            Column::User => f
+                .user()
+                .render_json(&*env.lock_users(), self.options.user_format),
             _ => None,
         }
     }

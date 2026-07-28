@@ -31,16 +31,13 @@ impl PermissionsPlusRender for Option<f::PermissionsPlus> {
         }
     }
 
-    fn render_json(&self) -> String {
-        match self {
-            Some(p) => {
-                let mut chars = vec![p.attributes.render_type_json()];
-                chars.extend(p.attributes.render_json());
+    fn render_json(&self) -> Option<String> {
+        self.map(|p| {
+            let mut chars = vec![p.attributes.render_type_json()];
+            chars.extend(p.attributes.render_json());
 
-                chars
-            }
-            None => vec![],
-        }
+            chars
+        })
     }
 }
 

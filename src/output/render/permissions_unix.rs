@@ -40,8 +40,8 @@ impl PermissionsPlusRender for Option<f::PermissionsPlus> {
         }
     }
 
-    fn render_json(&self) -> String {
-        if let Some(p) = self {
+    fn render_json(&self) -> Option<String> {
+        self.map(|p| {
             let mut chars = vec![p.file_type.render_json()];
             let permissions = p.permissions;
             chars.extend(Some(permissions).render_json(p.file_type.is_regular_file()));
@@ -51,11 +51,7 @@ impl PermissionsPlusRender for Option<f::PermissionsPlus> {
             }
 
             chars.join("")
-        } else {
-            let chars: Vec<_> = iter::repeat_n("-", 10).collect();
-
-            chars.join("")
-        }
+        })
     }
 }
 
