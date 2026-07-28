@@ -7,10 +7,10 @@
 use std::io::{self, Write};
 
 use crate::{
-    fs::{Dir, DotFilter, File, feature::git::GitCache, fields as f},
+    fs::{Dir, DotFilter, File, feature::git::GitCache},
     output::{
         details::{self, show_xattr_hint},
-        render::{PermissionsPlusRender, TimeRender},
+        render::{PermissionsPlusRender, TimeRender, UserRender},
         table::{Column, ENVIRONMENT, Environment, Options as TableOptions},
     },
 };
@@ -49,7 +49,7 @@ impl<'a> Render<'a> {
         git_ignoring: bool,
         git_repos: bool,
     ) -> Self {
-        /// Should not cause problem as usage of the global at both places should not happen, but maybe need advice on how to better handle that ?
+        // Should not cause problem as usage of the global at both places should not happen, but maybe need advice on how to better handle that ?
         let environment = &*ENVIRONMENT;
 
         Self {
@@ -225,6 +225,10 @@ impl<'a> JsonFileObject<'a> {
                     .render_json(env.time_offset, self.options.time_format.clone()),
             ),
             Column::FileSize => Some(f.size().render_json(self.options.size_format, &env.numeric)),
+            Column::User => Some(
+                f.user()
+                    .render_json(&*env.lock_users(), self.options.user_format),
+            ),
             _ => None,
         }
     }

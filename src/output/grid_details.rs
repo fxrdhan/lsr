@@ -124,8 +124,6 @@ impl<'a> Render<'a> {
             .as_ref()
             .expect("Details table options not given!");
 
-        let drender = self.details_for_column();
-
         let color_scale_info = ColorScaleInformation::from_color_scale(
             self.details.color_scale,
             &self.files,

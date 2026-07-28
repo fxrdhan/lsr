@@ -13,6 +13,7 @@ use crate::output::table::UserFormat;
 
 pub trait Render {
     fn render<C: Colours, U: Users>(self, colours: &C, users: &U, format: UserFormat) -> TextCell;
+    fn render_json<U: Users>(self, users: &U, format: UserFormat) -> String;
 }
 
 impl Render for Option<f::User> {
@@ -37,6 +38,19 @@ impl Render for Option<f::User> {
             colours.other()
         };
         TextCell::paint(style, user_name)
+    }
+
+    fn render_json<U: Users>(self, users: &U, format: UserFormat) -> String {
+        let uid = match self {
+            Some(u) => u.0,
+            None => return String::from("-"),
+        };
+
+        match (format, users.get_user_by_uid(uid)) {
+            (_, None) => uid.to_string(),
+            (UserFormat::Numeric, _) => uid.to_string(),
+            (UserFormat::Name, Some(user)) => user.name().to_string_lossy().into(),
+        }
     }
 }
 
