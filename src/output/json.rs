@@ -224,7 +224,8 @@ impl<'a> JsonFileObject<'a> {
                     .get_corresponding_time(f)
                     .render_json(env.time_offset, self.options.time_format.clone()),
             ),
-            c => None,
+            Column::FileSize => Some(f.size().render_json(self.options.size_format, &env.numeric)),
+            _ => None,
         }
     }
 }

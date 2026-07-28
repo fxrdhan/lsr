@@ -101,6 +101,36 @@ impl f::Size {
             .into(),
         }
     }
+
+    pub fn render_json(self, size_format: SizeFormat, numerics: &NumericLocale) -> String {
+        use unit_prefix::NumberPrefix;
+
+        let size = match self {
+            Self::Some(s) => s,
+            Self::None => return String::from("-"),
+            Self::DeviceIDs(ref ids) => return ids.render_json(),
+        };
+
+        let result = match size_format {
+            SizeFormat::DecimalBytes => NumberPrefix::decimal(size as f64),
+            SizeFormat::BinaryBytes => NumberPrefix::binary(size as f64),
+            SizeFormat::JustBytes => return numerics.format_int(size),
+        };
+
+        let (prefix, n) = match result {
+            NumberPrefix::Standalone(b) => return numerics.format_int(b),
+            NumberPrefix::Prefixed(p, n) => (p, n),
+        };
+
+        let symbol = prefix.symbol();
+        let number = if n < 10_f64 {
+            numerics.format_float(n, 1)
+        } else {
+            numerics.format_int(n.round() as isize)
+        };
+
+        return number + symbol;
+    }
 }
 
 impl f::DeviceIDs {
@@ -117,6 +147,10 @@ impl f::DeviceIDs {
             ]
             .into(),
         }
+    }
+
+    fn render_json(self) -> String {
+        vec![self.major.to_string(), self.minor.to_string()].join(",")
     }
 }
 
