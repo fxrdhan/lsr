@@ -7,7 +7,7 @@
 use std::io::{self, Write};
 
 use crate::{
-    fs::{Dir, DotFilter, File, feature::git::GitCache},
+    fs::{Dir, DotFilter, File, feature::git::GitCache, fields as f},
     output::{
         details::{self, show_xattr_hint},
         render::{PermissionsPlusRender, TimeRender, UserRender},
@@ -161,6 +161,7 @@ impl<'a> Render<'a> {
                 self.git_repos,
                 self.environment,
                 show_xattr_hint(self.opts.details.as_ref().map_or(false, |d| d.secattr), f),
+                self.git,
             );
             fobj.render()
         } else {
@@ -174,6 +175,8 @@ struct JsonFileObject<'a> {
     internal: Vec<(Column, String)>,
 
     options: &'a TableOptions,
+
+    pub git: Option<&'a GitCache>,
 }
 
 impl<'a> JsonFileObject<'a> {
@@ -193,10 +196,12 @@ impl<'a> JsonFileObject<'a> {
         git_repos: bool,
         env: &Environment,
         xattrs: bool,
+        git: Option<&'a GitCache>,
     ) -> Self {
         let mut res = Self {
             internal: vec![],
             options,
+            git,
         };
 
         let columns = options.columns.collect(actually_enable_git, git_repos);
@@ -226,7 +231,14 @@ impl<'a> JsonFileObject<'a> {
             Column::User => f
                 .user()
                 .render_json(&*env.lock_users(), self.options.user_format),
+            Column::GitStatus => Some(self.git_status(f).render_json()),
             _ => None,
         }
+    }
+
+    fn git_status(&self, file: &File<'_>) -> f::Git {
+        self.git
+            .map(|g| g.get(&file.path, file.is_directory()))
+            .unwrap_or_default()
     }
 }

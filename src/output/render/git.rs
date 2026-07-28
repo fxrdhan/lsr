@@ -16,6 +16,10 @@ impl f::Git {
             contents: vec![self.staged.render(colours), self.unstaged.render(colours)].into(),
         }
     }
+
+    pub fn render_json(self) -> String {
+        return self.staged.render_json().to_owned() + self.unstaged.render_json();
+    }
 }
 
 impl f::GitStatus {
@@ -30,6 +34,20 @@ impl f::GitStatus {
             Self::TypeChange   => colours.type_change().paint("T"),
             Self::Ignored      => colours.ignored().paint("I"),
             Self::Conflicted   => colours.conflicted().paint("U"),
+        };
+    }
+
+    fn render_json(self) -> &'static str {
+        #[rustfmt::skip]
+        return match self {
+            Self::NotModified  => "-",
+            Self::New          => "N",
+            Self::Modified     => "M",
+            Self::Deleted      => "D",
+            Self::Renamed      => "R",
+            Self::TypeChange   => "T",
+            Self::Ignored      => "I",
+            Self::Conflicted   => "U",
         };
     }
 }
