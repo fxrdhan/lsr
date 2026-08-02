@@ -116,7 +116,7 @@ impl RenderPermissions for Option<f::Permissions> {
                     (true, true) => "t",
                 };
 
-                return vec![
+                vec![
                     bit(p.user_read, "r"),
                     bit(p.user_write, "w"),
                     user_exec, // p.user_execute_bit(colours, is_regular_file),
@@ -126,7 +126,7 @@ impl RenderPermissions for Option<f::Permissions> {
                     bit(p.other_read, "r"),
                     bit(p.other_write, "w"),
                     other_exec, //p.other_execute_bit(colours),
-                ];
+                ]
             }
             None => std::iter::repeat_n("-", 9).collect::<Vec<&'static str>>(),
         }

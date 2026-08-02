@@ -101,7 +101,7 @@ impl f::Blocksize {
             numerics.format_int(n.round() as isize)
         };
 
-        return Some(number + symbol);
+        Some(number + symbol)
     }
 }
 

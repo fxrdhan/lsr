@@ -26,7 +26,7 @@ pub trait Render {
     ) -> Option<String>;
 }
 
-impl<'a> Render for Option<LocCounts> {
+impl Render for Option<LocCounts> {
     fn render(
         self,
         style: Style,
@@ -58,9 +58,7 @@ impl<'a> Render for Option<LocCounts> {
         loc_total: Option<usize>,
         numeric_format: &NumericLocale,
     ) -> Option<String> {
-        let Some(counts) = self else {
-            return None;
-        };
+        let counts = self?;
         match content {
             CodeContent::Percent => match loc_total {
                 Some(total) if total > 0 => {

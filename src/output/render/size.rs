@@ -129,7 +129,7 @@ impl f::Size {
             numerics.format_int(n.round() as isize)
         };
 
-        return Some(number + symbol);
+        Some(number + symbol)
     }
 }
 
@@ -150,7 +150,7 @@ impl f::DeviceIDs {
     }
 
     fn render_json(self) -> String {
-        vec![self.major.to_string(), self.minor.to_string()].join(",")
+        [self.major.to_string(), self.minor.to_string()].join(",")
     }
 }
 

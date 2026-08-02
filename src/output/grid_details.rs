@@ -92,28 +92,6 @@ pub struct Render<'a> {
 }
 
 impl<'a> Render<'a> {
-    /// Create a temporary Details render that gets used for the columns of
-    /// the grid-details render that’s being generated.
-    ///
-    /// This includes an empty files vector because the files get added to
-    /// the table in *this* file, not in details: we only want to insert every
-    /// *n* files into each column’s table, not all of them.
-    fn details_for_column(&self) -> DetailsRender<'a> {
-        #[rustfmt::skip]
-        return DetailsRender {
-            dir:           self.dir,
-            files:         Vec::new(),
-            theme:         self.theme,
-            file_style:    self.file_style,
-            opts:          self.details,
-            recurse:       None,
-            filter:        self.filter,
-            git_ignoring:  self.git_ignoring,
-            git:           self.git,
-            git_repos:     self.git_repos,
-        };
-    }
-
     // This doesn’t take an IgnoreCache even though the details one does
     // because grid-details has no tree view.
 

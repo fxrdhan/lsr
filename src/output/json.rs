@@ -133,7 +133,7 @@ impl<'a> Render<'a> {
             } else {
                 write!(w, ",")?;
             }
-            write!(w, "\"{}\":", dir.path.display().to_string())?;
+            write!(w, "\"{}\":", dir.path.display())?;
             self.render_directory(&mut dir, w)?;
         }
         write!(w, "}}")?;
@@ -155,10 +155,10 @@ impl<'a> Render<'a> {
     }
 
     fn render_file(&self, f: &File<'a>) -> String {
-        return match &self.opts.details {
+        match &self.opts.details {
             None => format!("\"{}\"", f.name),
             Some(o) => self.render_file_long(f, o),
-        };
+        }
     }
 
     fn render_file_long(&self, f: &File<'a>, o: &details::Options) -> String {
@@ -169,7 +169,7 @@ impl<'a> Render<'a> {
                 self.git.is_some(),
                 self.git_repos,
                 self.environment,
-                show_xattr_hint(self.opts.details.as_ref().map_or(false, |d| d.secattr), f),
+                show_xattr_hint(self.opts.details.as_ref().is_some_and(|d| d.secattr), f),
                 self.git,
             );
             fobj.render()
@@ -219,7 +219,7 @@ impl<'a> JsonFileObject<'a> {
             .iter()
             .for_each(|c| res.add_column(f, c, env, xattrs));
 
-        return res;
+        res
     }
 
     fn add_column(&mut self, f: &File, c: &Column, env: &Environment, xattrs: bool) {

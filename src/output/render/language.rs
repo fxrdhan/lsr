@@ -13,7 +13,7 @@ pub trait Render {
     fn render_json(self) -> Option<String>;
 }
 
-impl<'a> Render for Option<&'a Language> {
+impl Render for Option<&Language> {
     fn render(self, style: Style) -> TextCell {
         match self {
             Some(lang) => TextCell::paint(style, lang.name.to_string()),

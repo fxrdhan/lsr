@@ -51,7 +51,7 @@ impl Render for Option<f::OctalPermissions> {
     }
 
     fn render_json(&self) -> Option<String> {
-        return self.map(|p| {
+        self.map(|p| {
             let perm = &p.permissions;
             #[rustfmt::skip]
                 let octal_sticky = f::OctalPermissions::bits_to_octal(
@@ -75,8 +75,8 @@ impl Render for Option<f::OctalPermissions> {
                 perm.other_execute,
             );
 
-            return format!("{octal_sticky}{octal_owner}{octal_group}{octal_other}");
-        });
+            format!("{octal_sticky}{octal_owner}{octal_group}{octal_other}")
+        })
     }
 }
 

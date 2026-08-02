@@ -18,7 +18,7 @@ impl f::Git {
     }
 
     pub fn render_json(self) -> String {
-        return self.staged.render_json().to_owned() + self.unstaged.render_json();
+        self.staged.render_json().to_owned() + self.unstaged.render_json()
     }
 }
 
@@ -99,7 +99,7 @@ impl f::SubdirGitRepo {
         if let Some(status) = self.status {
             Some(format!("{} {}", status.render_json(), branch_name))
         } else {
-            return Some(branch_name);
+            Some(branch_name)
         }
     }
 }
