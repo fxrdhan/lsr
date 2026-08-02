@@ -81,3 +81,4 @@ mod flags_windows;
 mod flags;
 
 mod language;
+pub use self::language::Render as LanguageRender;

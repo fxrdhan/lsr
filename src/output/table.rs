@@ -25,7 +25,7 @@ use crate::output::cell::TextCell;
 use crate::output::color_scale::ColorScaleInformation;
 #[cfg(unix)]
 use crate::output::render::{GroupRender, OctalPermissionsRender, UserRender};
-use crate::output::render::{PermissionsPlusRender, TimeRender};
+use crate::output::render::{LanguageRender, PermissionsPlusRender, TimeRender};
 use crate::output::time::TimeFormat;
 use crate::theme::Theme;
 
@@ -546,7 +546,9 @@ impl<'a> Table<'a> {
                 &self.env.numeric,
                 color_scale_info,
             ),
-            Column::Language => self.language(file),
+            Column::Language => file
+                .language()
+                .render(self.theme.ui.date.unwrap_or_default()),
             Column::Loc(content) => self.loc(file, content),
             #[cfg(unix)]
             Column::HardLinks => file.links().render(self.theme, &self.env.numeric),

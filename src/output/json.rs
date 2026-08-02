@@ -7,13 +7,10 @@
 use std::io::{self, Write};
 
 use crate::{
-    fs::{Dir, DotFilter, File, feature::git::GitCache, fields as f},
-    output::{
-        details::{self, show_xattr_hint},
-        render::{
-            GroupRender, OctalPermissionsRender, PermissionsPlusRender, TimeRender, UserRender,
-        },
-        table::{Column, ENVIRONMENT, Environment, Options as TableOptions},
+    fs::{Dir, DotFilter, File, feature::git::GitCache, fields as f}, output::{
+        details::{self, show_xattr_hint}, render::{
+            GroupRender, LanguageRender, OctalPermissionsRender, PermissionsPlusRender, TimeRender, UserRender,
+        }, table::{Column, ENVIRONMENT, Environment, Options as TableOptions},
     },
 };
 
@@ -252,7 +249,7 @@ impl<'a> JsonFileObject<'a> {
                 .render_json(),
             Column::SecurityContext => f.security_context().render_json(),
 
-            Column::Language => todo!(),
+            Column::Language => f.language().render_json(),
             Column::Loc(code_content) => todo!(),
             Column::SubdirGitRepo(_) => todo!(),
         }
