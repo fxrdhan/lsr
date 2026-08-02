@@ -180,4 +180,28 @@ pub mod test {
 
         assert_eq!(expected, stati.render(&TestColours));
     }
+
+    #[test]
+    fn git_blank_json() {
+        let stati = f::Git {
+            staged: f::GitStatus::NotModified,
+            unstaged: f::GitStatus::NotModified,
+        };
+
+        let expected = "--".to_string();
+
+        assert_eq!(expected, stati.render_json());
+    }
+
+    #[test]
+    fn git_new_changed_json() {
+        let stati = f::Git {
+            staged: f::GitStatus::New,
+            unstaged: f::GitStatus::Modified,
+        };
+
+        let expected = "NM".to_string();
+
+        assert_eq!(expected, stati.render_json());
+    }
 }

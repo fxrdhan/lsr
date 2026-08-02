@@ -329,4 +329,94 @@ pub mod test {
 
         assert_eq!(expected, bits.render(&TestColours, true).into());
     }
+
+    #[test]
+    #[cfg(unix)]
+    fn negate_json() {
+        let bits = Some(f::Permissions {
+            user_read: false,
+            user_write: false,
+            user_execute: false,
+            setuid: false,
+            group_read: false,
+            group_write: false,
+            group_execute: false,
+            setgid: false,
+            other_read: false,
+            other_write: false,
+            other_execute: false,
+            sticky: false,
+        });
+
+        let expected = vec!["-", "-", "-", "-", "-", "-", "-", "-", "-"];
+
+        assert_eq!(expected, bits.render_json(false));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn affirm_json() {
+        let bits = Some(f::Permissions {
+            user_read: true,
+            user_write: true,
+            user_execute: true,
+            setuid: false,
+            group_read: true,
+            group_write: true,
+            group_execute: true,
+            setgid: false,
+            other_read: true,
+            other_write: true,
+            other_execute: true,
+            sticky: false,
+        });
+
+        let expected = vec!["r", "w", "x", "r", "w", "x", "r", "w", "x"];
+
+        assert_eq!(expected, bits.render_json(true));
+    }
+
+    #[test]
+    fn specials_json() {
+        let bits = Some(f::Permissions {
+            user_read: false,
+            user_write: false,
+            user_execute: true,
+            setuid: true,
+            group_read: false,
+            group_write: false,
+            group_execute: true,
+            setgid: true,
+            other_read: false,
+            other_write: false,
+            other_execute: true,
+            sticky: true,
+        });
+
+        let expected = vec!["-", "-", "s", "-", "-", "s", "-", "-", "t"];
+
+        assert_eq!(expected, bits.render_json(true));
+    }
+
+    #[test]
+    fn extra_specials_json() {
+        let bits = Some(f::Permissions {
+            user_read: false,
+            user_write: false,
+            user_execute: false,
+            setuid: true,
+            group_read: false,
+            group_write: false,
+            group_execute: false,
+            setgid: true,
+            other_read: false,
+            other_write: false,
+            other_execute: false,
+            sticky: true,
+        });
+
+        let expected = vec!["-", "-", "S", "-", "-", "S", "-", "-", "T"];
+
+        assert_eq!(expected, bits.render_json(true));
+    }
 }

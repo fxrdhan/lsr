@@ -287,4 +287,61 @@ pub mod test {
             )
         );
     }
+
+    #[test]
+    fn directory_json() {
+        let directory = f::Size::None;
+        let expected = None;
+        assert_eq!(
+            expected,
+            directory.render_json(SizeFormat::JustBytes, &NumericLocale::english())
+        );
+    }
+
+    #[test]
+    fn file_decimal_json() {
+        let directory = f::Size::Some(2_100_000);
+        let expected = Some("2.1M".to_string());
+
+        assert_eq!(
+            expected,
+            directory.render_json(SizeFormat::DecimalBytes, &NumericLocale::english())
+        );
+    }
+
+    #[test]
+    fn file_binary_json() {
+        let directory = f::Size::Some(1_048_576);
+        let expected = Some("1.0Mi".to_string());
+
+        assert_eq!(
+            expected,
+            directory.render_json(SizeFormat::BinaryBytes, &NumericLocale::english())
+        );
+    }
+
+    #[test]
+    fn file_bytes_json() {
+        let directory = f::Size::Some(1_048_576);
+        let expected = Some("1,048,576".to_string());
+
+        assert_eq!(
+            expected,
+            directory.render_json(SizeFormat::JustBytes, &NumericLocale::english())
+        );
+    }
+
+    #[test]
+    fn device_ids_json() {
+        let directory = f::Size::DeviceIDs(f::DeviceIDs {
+            major: 10,
+            minor: 80,
+        });
+        let expected = Some("10,80".to_string());
+
+        assert_eq!(
+            expected,
+            directory.render_json(SizeFormat::JustBytes, &NumericLocale::english())
+        );
+    }
 }
