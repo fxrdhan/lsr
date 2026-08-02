@@ -6,6 +6,8 @@
 // SPDX-License-Identifier: MIT
 use std::io::{self, Write};
 
+use log::debug;
+
 use crate::{
     fs::{Dir, DotFilter, File, feature::git::GitCache, fields as f},
     output::{
@@ -259,8 +261,17 @@ impl<'a> JsonFileObject<'a> {
 
             Column::Language => f.language().render_json(),
             Column::Loc(code_content) => f.loc().render_json(*code_content, None, &env.numeric),
-            Column::SubdirGitRepo(_) => todo!(),
+            Column::SubdirGitRepo(status) => self.subdir_git_repo(f, *status).render_json(),
         }
+    }
+
+    fn subdir_git_repo(&self, file: &File<'_>, status: bool) -> f::SubdirGitRepo {
+        debug!("Getting subdir repo status for path {:?}", file.path);
+
+        if file.is_directory() {
+            return f::SubdirGitRepo::from_path(&file.path, status);
+        }
+        f::SubdirGitRepo::default()
     }
 
     fn git_status(&self, file: &File<'_>) -> f::Git {

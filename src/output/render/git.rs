@@ -93,6 +93,15 @@ impl f::SubdirGitRepo {
             }
         }
     }
+
+    pub fn render_json(self) -> Option<String> {
+        let branch_name = self.branch.unwrap_or("-".to_string());
+        if let Some(status) = self.status {
+            Some(format!("{} {}", status.render_json(), branch_name))
+        } else {
+            return Some(branch_name);
+        }
+    }
 }
 
 impl f::SubdirGitRepoStatus {
@@ -101,6 +110,14 @@ impl f::SubdirGitRepoStatus {
             Self::NoRepo => colours.no_repo().paint("-"),
             Self::GitClean => colours.git_clean().paint("|"),
             Self::GitDirty => colours.git_dirty().paint("+"),
+        }
+    }
+
+    pub fn render_json(self) -> &'static str {
+        match self {
+            Self::NoRepo => "-",
+            Self::GitClean => "|",
+            Self::GitDirty => "+",
         }
     }
 }
