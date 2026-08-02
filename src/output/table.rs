@@ -25,7 +25,7 @@ use crate::output::cell::TextCell;
 use crate::output::color_scale::ColorScaleInformation;
 #[cfg(unix)]
 use crate::output::render::{GroupRender, OctalPermissionsRender, UserRender};
-use crate::output::render::{LanguageRender, PermissionsPlusRender, TimeRender};
+use crate::output::render::{LanguageRender, LocRender, PermissionsPlusRender, TimeRender};
 use crate::output::time::TimeFormat;
 use crate::theme::Theme;
 
@@ -549,7 +549,18 @@ impl<'a> Table<'a> {
             Column::Language => file
                 .language()
                 .render(self.theme.ui.date.unwrap_or_default()),
-            Column::Loc(content) => self.loc(file, content),
+            Column::Loc(content) => file.loc().render(
+                self.theme
+                    .ui
+                    .size
+                    .unwrap_or_default()
+                    .number_byte
+                    .unwrap_or_default(),
+                self.theme.ui.punctuation.unwrap_or_default(),
+                content,
+                self.loc_total,
+                &self.env.numeric,
+            ),
             #[cfg(unix)]
             Column::HardLinks => file.links().render(self.theme, &self.env.numeric),
             #[cfg(unix)]
@@ -599,52 +610,6 @@ impl<'a> Table<'a> {
                 self.time_format.clone(),
             ),
         }
-    }
-
-    /// The language column: the recognised language’s name, or a dash.
-    fn language(&self, file: &File<'_>) -> TextCell {
-        match file.language() {
-            Some(lang) => TextCell::paint(
-                self.theme.ui.date.unwrap_or_default(),
-                lang.name.to_string(),
-            ),
-            None => self.loc_placeholder(),
-        }
-    }
-
-    /// A lines-of-code column, rendered as a raw code-line count or as a
-    /// percentage of the whole tree’s code, depending on `content`.
-    fn loc(&self, file: &File<'_>, content: CodeContent) -> TextCell {
-        let Some(counts) = file.loc() else {
-            return self.loc_placeholder();
-        };
-        // Quantities take the same colour as file sizes, so the Code column
-        // reads consistently next to Size.
-        let style = self
-            .theme
-            .ui
-            .size
-            .unwrap_or_default()
-            .number_byte
-            .unwrap_or_default();
-        match content {
-            CodeContent::Percent => match self.loc_total {
-                Some(total) if total > 0 => {
-                    let pct = (counts.code as f64) * 100.0 / (total as f64);
-                    TextCell::paint(style, format!("{pct:.1}%"))
-                }
-                _ => self.loc_placeholder(),
-            },
-            _ => TextCell::paint(style, self.env.numeric.format_int(counts.code)),
-        }
-    }
-
-    /// The placeholder shown for files with no language or no count.
-    fn loc_placeholder(&self) -> TextCell {
-        TextCell::paint(
-            self.theme.ui.punctuation.unwrap_or_default(),
-            "-".to_string(),
-        )
     }
 
     fn git_status(&self, file: &File<'_>) -> f::Git {
