@@ -279,11 +279,14 @@ impl<'a> Render<'a> {
         code_loc: Option<usize>,
     ) -> String {
         if let Some(table_opts) = &o.table {
+            let columns = table_opts
+                .columns
+                .collect(self.git.is_some(), self.git_repos);
+
             let fobj = JsonFileObject::create_for_for_file(
                 f,
                 table_opts,
-                self.git.is_some(),
-                self.git_repos,
+                columns,
                 self.environment,
                 show_xattr_hint(self.opts.details.as_ref().is_some_and(|d| d.secattr), f),
                 self.git,
@@ -320,8 +323,7 @@ impl<'a> JsonFileObject<'a> {
     fn create_for_for_file(
         f: &File<'a>,
         options: &'a TableOptions,
-        actually_enable_git: bool,
-        git_repos: bool,
+        columns: Vec<Column>,
         env: &Environment,
         xattrs: bool,
         git: Option<&'a GitCache>,
@@ -334,8 +336,6 @@ impl<'a> JsonFileObject<'a> {
             code_loc,
         };
 
-        let columns = options.columns.collect(actually_enable_git, git_repos);
-
         columns
             .iter()
             .for_each(|c| res.add_column(f, c, env, xattrs));
@@ -347,7 +347,7 @@ impl<'a> JsonFileObject<'a> {
         let column_opt = self.get_column(f, c, env, xattrs);
 
         if let Some(column) = column_opt {
-            self.internal.push((c.clone(), format!("\"{column}\"")))
+            self.internal.push((*c, format!("\"{column}\"")))
         }
     }
 
