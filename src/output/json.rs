@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: MIT
 use std::{
     io::{self, Write},
-    path::Component,
+    path::{Component, PathBuf},
 };
 
 use log::debug;
@@ -16,6 +16,8 @@ use crate::{
         self, Dir, DotFilter, File, dir_action::DirAction, feature::git::GitCache, fields as f,
         filter::FileFilter,
     },
+    loc::count_roots,
+    options::parser::CodeContent,
     output::{
         View,
         details::{self, show_xattr_hint},
@@ -51,9 +53,6 @@ pub struct Render<'a> {
 
     environment: &'a Environment,
 }
-
-// TODO:
-// - code loc
 
 impl<'a> Render<'a> {
     pub fn new(
@@ -112,13 +111,31 @@ impl<'a> Render<'a> {
     fn render_files<W: Write>(&self, files: Vec<File<'a>>, w: &mut W) -> io::Result<()> {
         match &self.opts.details {
             None => {
-                let fnames: Vec<String> = files.iter().map(|f| self.render_file(f)).collect();
+                let fnames: Vec<String> = files.iter().map(|f| self.render_file(f, None)).collect();
                 write!(w, "[{}]", fnames.join(","))?;
             }
-            Some(_) => {
+            Some(details) => {
+                let code_loc = match &details.table {
+                    Some(t) => {
+                        if matches!(
+                            t.columns.loc,
+                            Some(CodeContent::Percent | CodeContent::Both)
+                        ) {
+                            let roots: Vec<PathBuf> =
+                                files.iter().map(|f| f.path.clone()).collect();
+                            let report = count_roots(&roots);
+
+                            Some(report.total().code)
+                        } else {
+                            None
+                        }
+                    }
+                    None => None,
+                };
+
                 let fnames: Vec<String> = files
                     .iter()
-                    .map(|f| format!("\"{}\":{{{}}}", f.name, self.render_file(f)))
+                    .map(|f| format!("\"{}\":{{{}}}", f.name, self.render_file(f, code_loc)))
                     .collect();
                 write!(w, "{{{}}}", fnames.join(","))?;
             }
@@ -248,14 +265,19 @@ impl<'a> Render<'a> {
         Ok(())
     }
 
-    fn render_file(&self, f: &File<'a>) -> String {
+    fn render_file(&self, f: &File<'a>, code_loc: Option<usize>) -> String {
         match &self.opts.details {
             None => format!("\"{}\"", f.name),
-            Some(o) => self.render_file_long(f, o),
+            Some(o) => self.render_file_long(f, o, code_loc),
         }
     }
 
-    fn render_file_long(&self, f: &File<'a>, o: &details::Options) -> String {
+    fn render_file_long(
+        &self,
+        f: &File<'a>,
+        o: &details::Options,
+        code_loc: Option<usize>,
+    ) -> String {
         if let Some(table_opts) = &o.table {
             let fobj = JsonFileObject::create_for_for_file(
                 f,
@@ -265,6 +287,7 @@ impl<'a> Render<'a> {
                 self.environment,
                 show_xattr_hint(self.opts.details.as_ref().is_some_and(|d| d.secattr), f),
                 self.git,
+                code_loc,
             );
             fobj.render()
         } else {
@@ -280,6 +303,8 @@ struct JsonFileObject<'a> {
     options: &'a TableOptions,
 
     pub git: Option<&'a GitCache>,
+
+    code_loc: Option<usize>,
 }
 
 impl<'a> JsonFileObject<'a> {
@@ -300,11 +325,13 @@ impl<'a> JsonFileObject<'a> {
         env: &Environment,
         xattrs: bool,
         git: Option<&'a GitCache>,
+        code_loc: Option<usize>,
     ) -> Self {
         let mut res = Self {
             internal: vec![],
             options,
             git,
+            code_loc,
         };
 
         let columns = options.columns.collect(actually_enable_git, git_repos);
@@ -320,7 +347,7 @@ impl<'a> JsonFileObject<'a> {
         let column_opt = self.get_column(f, c, env, xattrs);
 
         if let Some(column) = column_opt {
-            self.internal.push((*c, format!("\"{column}\"")))
+            self.internal.push((c.clone(), format!("\"{column}\"")))
         }
     }
 
@@ -354,7 +381,10 @@ impl<'a> JsonFileObject<'a> {
             Column::SecurityContext => f.security_context().render_json(),
 
             Column::Language => f.language().render_json(),
-            Column::Loc(code_content) => f.loc().render_json(*code_content, None, &env.numeric),
+            Column::Loc(code_content) => {
+                f.loc()
+                    .render_json(*code_content, self.code_loc, &env.numeric)
+            }
             Column::SubdirGitRepo(status) => self.subdir_git_repo(f, *status).render_json(),
         }
     }
