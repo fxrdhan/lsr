@@ -142,7 +142,7 @@ impl f::Flags {
         )
     }
 
-    pub fn render(self, format: FlagsFormat) -> Option<String> {
+    pub fn render_json(self, format: FlagsFormat) -> Option<String> {
         Some(if format == FlagsFormat::Short {
             flags_to_windows_string(self.0)
         } else {

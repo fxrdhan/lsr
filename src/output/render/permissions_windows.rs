@@ -36,7 +36,7 @@ impl PermissionsPlusRender for Option<f::PermissionsPlus> {
             let mut chars = vec![p.attributes.render_type_json()];
             chars.extend(p.attributes.render_json());
 
-            chars
+            chars.join("")
         })
     }
 }
@@ -81,7 +81,7 @@ impl f::Attributes {
         ]
     }
 
-    pub fn render_type_json(self) -> Vec<&'static str> {
+    pub fn render_type_json(self) -> &'static str {
         if self.reparse_point {
             return "l";
         } else if self.directory {

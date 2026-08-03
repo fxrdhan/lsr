@@ -11,6 +11,9 @@ use std::{
 
 use log::debug;
 
+#[cfg(unix)]
+use crate::output::render::{GroupRender, OctalPermissionsRender, UserRender};
+
 use crate::{
     fs::{
         self, Dir, DotFilter, File, dir_action::DirAction, feature::git::GitCache, fields as f,
@@ -21,10 +24,7 @@ use crate::{
     output::{
         View,
         details::{self, show_xattr_hint},
-        render::{
-            GroupRender, LanguageRender, LocRender, OctalPermissionsRender, PermissionsPlusRender,
-            TimeRender, UserRender,
-        },
+        render::{LanguageRender, LocRender, PermissionsPlusRender, TimeRender},
         table::{Column, ENVIRONMENT, Environment, Options as TableOptions},
     },
 };
@@ -358,26 +358,33 @@ impl<'a> JsonFileObject<'a> {
                 .get_corresponding_time(f)
                 .render_json(env.time_offset, self.options.time_format.clone()),
             Column::FileSize => f.size().render_json(self.options.size_format, &env.numeric),
+            #[cfg(unix)]
             Column::User => f
                 .user()
                 .render_json(&*env.lock_users(), self.options.user_format),
             Column::GitStatus => Some(self.git_status(f).render_json()),
+            #[cfg(unix)]
             Column::Blocksize => f
                 .blocksize()
                 .render_json(self.options.size_format, &env.numeric),
             Column::FileFlags => f.flags().render_json(self.options.flags_format),
+            #[cfg(unix)]
             Column::Group => f.group().render_json(
                 &*env.lock_users(),
                 self.options.user_format,
                 self.options.group_format,
                 f.user(),
             ),
+            #[cfg(unix)]
             Column::Inode => Some(f.inode().render_json()),
+            #[cfg(unix)]
             Column::HardLinks => Some(f.links().render_json(&env.numeric)),
+            #[cfg(unix)]
             Column::Octal => f
                 .permissions()
                 .map(|p| f::OctalPermissions { permissions: p })
                 .render_json(),
+            #[cfg(unix)]
             Column::SecurityContext => f.security_context().render_json(),
 
             Column::Language => f.language().render_json(),
