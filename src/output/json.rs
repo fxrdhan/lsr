@@ -4,13 +4,20 @@
 // SPDX-FileCopyrightText: 2023-2026 Christina Sørensen, eza contributors
 // SPDX-FileCopyrightText: 2014 Benjamin Sago
 // SPDX-License-Identifier: MIT
-use std::io::{self, Write};
+use std::{
+    io::{self, Write},
+    path::Component,
+};
 
 use log::debug;
 
 use crate::{
-    fs::{Dir, DotFilter, File, feature::git::GitCache, fields as f},
+    fs::{
+        self, Dir, DotFilter, File, dir_action::DirAction, feature::git::GitCache, fields as f,
+        filter::FileFilter,
+    },
     output::{
+        View,
         details::{self, show_xattr_hint},
         render::{
             GroupRender, LanguageRender, LocRender, OctalPermissionsRender, PermissionsPlusRender,
@@ -27,49 +34,54 @@ pub struct Options {
 }
 
 pub struct Render<'a> {
-    pub git: Option<&'a GitCache>,
+    git: Option<&'a GitCache>,
 
-    pub deref_links: bool,
-    pub total_size: bool,
+    deref_links: bool,
+    total_size: bool,
 
-    pub dots: DotFilter,
-    pub opts: &'a Options,
+    dots: DotFilter,
+    opts: &'a Options,
 
-    pub git_ignoring: bool,
-    pub git_repos: bool,
+    git_ignoring: bool,
+    git_repos: bool,
+
+    file_filter: &'a FileFilter,
+    dir_action: &'a DirAction,
+    view: &'a View,
 
     environment: &'a Environment,
 }
 
 // TODO:
-// - recursion
 // - code loc
 
 impl<'a> Render<'a> {
     pub fn new(
         git: Option<&'a GitCache>,
 
-        deref_links: bool,
-        total_size: bool,
-
         dots: DotFilter,
         opts: &'a Options,
 
         git_ignoring: bool,
         git_repos: bool,
+
+        options: &'a crate::options::Options,
     ) -> Self {
         // Should not cause problem as usage of the global at both places should not happen, but maybe need advice on how to better handle that ?
         let environment = &*ENVIRONMENT;
 
         Self {
             git,
-            deref_links,
-            total_size,
+            deref_links: options.view.deref_links,
+            total_size: options.view.total_size,
             dots,
             opts,
             git_ignoring,
             git_repos,
             environment,
+            file_filter: &options.filter,
+            dir_action: &options.dir_action,
+            view: &options.view,
         }
     }
 
@@ -79,14 +91,20 @@ impl<'a> Render<'a> {
         mut dirs: Vec<Dir>,
         w: &mut W,
     ) -> io::Result<()> {
-        match (files.len(), dirs.len()) {
-            (0, 1) => {
+        match (
+            files.len(),
+            dirs.len(),
+            self.dir_action.recurse_options().is_some(),
+        ) {
+            (0, 1, false) => {
+                // Safe unwrap as we verify before that the len is at least one.
                 let dir = dirs.get_mut(0).unwrap();
                 self.render_directory(dir, w)
             }
-            (_, 0) => self.render_files(files, w),
-            (0, _) => self.render_directories(dirs, w),
-            (_, _) => self.render_files_directories(files, dirs, w),
+            (_, 0, _) => self.render_files(files, w),
+            (0, _, true) => self.render_recursive_directories(&mut dirs, false, w),
+            (0, _, _) => self.render_directories(dirs, w),
+            (_, _, recurse) => self.render_files_directories(files, dirs, recurse, w),
         }?;
         Ok(())
     }
@@ -121,6 +139,77 @@ impl<'a> Render<'a> {
             .collect();
 
         self.render_files(files, w)?;
+
+        Ok(())
+    }
+
+    fn render_recursive_directories<W: Write>(
+        &self,
+        dirs: &'a mut Vec<Dir>,
+        sub_dir: bool,
+        w: &mut W,
+    ) -> io::Result<()> {
+        write!(w, "{{")?;
+        let mut first = true;
+        for dir in dirs {
+            if first {
+                first = false;
+            } else {
+                write!(w, ",")?;
+            }
+            if sub_dir {
+                write!(w, "\"{}\":{{", dir.path.display())?;
+            } else {
+                // We can safely unwrap as .. . and the / case ar not possible here. They cannot be subdirs.
+                write!(
+                    w,
+                    "\"{}\":{{",
+                    dir.path.file_name().unwrap().to_string_lossy()
+                )?;
+            }
+            let dir_r = dir.read()?;
+            let mut files: Vec<File<'a>> = dir_r
+                .files(
+                    self.dots,
+                    self.git,
+                    self.git_ignoring,
+                    self.deref_links,
+                    self.total_size,
+                )
+                .collect();
+
+            self.file_filter.filter_child_files(true, &mut files);
+            self.file_filter.sort_files(&mut files);
+            let recurse_opts = self.dir_action.recurse_options().unwrap();
+            let depth: usize = dir_r
+                .path
+                .components()
+                .filter(|&c| c != Component::CurDir)
+                .count()
+                + 1;
+
+            let follow_links = self.view.follow_links;
+            if !recurse_opts.tree && !recurse_opts.is_too_deep(depth) {
+                let mut child_dirs = files
+                    .iter()
+                    .filter(|f| {
+                        (if follow_links {
+                            f.points_to_directory()
+                        } else {
+                            f.is_directory()
+                        }) && !f.is_all_all
+                    })
+                    .map(fs::File::to_dir)
+                    .collect::<Vec<Dir>>();
+
+                write!(w, "\"files\":")?;
+                self.render_files(files, w)?;
+                write!(w, ", \"directories\":")?;
+                self.render_recursive_directories(&mut child_dirs, false, w)?;
+            };
+            write!(w, "}}")?;
+        }
+        write!(w, "}}")?;
         Ok(())
     }
 
@@ -143,13 +232,18 @@ impl<'a> Render<'a> {
     fn render_files_directories<W: Write>(
         &self,
         files: Vec<File<'a>>,
-        dirs: Vec<Dir>,
+        mut dirs: Vec<Dir>,
+        recurse: bool,
         w: &mut W,
     ) -> io::Result<()> {
         write!(w, "{{\"files\":")?;
         self.render_files(files, w)?;
         write!(w, ", \"directories\":")?;
-        self.render_directories(dirs, w)?;
+        if recurse {
+            self.render_recursive_directories(&mut dirs, false, w)?;
+        } else {
+            self.render_directories(dirs, w)?;
+        }
         write!(w, "}}")?;
         Ok(())
     }

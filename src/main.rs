@@ -304,15 +304,15 @@ impl Exa<'_> {
         let no_files = files.is_empty();
         let is_only_dir = dirs.len() == 1 && no_files;
 
+        // Separate json mode as there is special cases for multi directories cases
         if let Mode::Json(opts) = &self.options.view.mode {
             let r = json::Render::new(
                 self.git.as_ref(),
-                self.options.view.deref_links,
-                self.options.view.total_size,
                 self.options.filter.dot_filter,
                 opts,
                 self.options.filter.git_ignore == GitIgnore::CheckAndIgnore,
                 self.git_repos,
+                &self.options,
             );
 
             r.render(files, dirs, &mut self.writer)?;
